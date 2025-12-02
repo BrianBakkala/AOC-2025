@@ -1,8 +1,18 @@
-async function readFile(day, number, splitLines = false, callback = () => { })
+async function readFile(day, number, callback = () => { }, delimiter = "\r\n", trim = false)
 {
     return await fetch(`${day}/${number}.txt`)
         .then(r => r.text())
-        .then(r => callback(
-            splitLines ? r.split("\r\n") : r
-        ));
+        .then(r =>
+            delimiter
+                ? r.split(delimiter)
+                : r
+        )
+        .then(r =>
+            trim
+                ? Array.isArray(r)
+                    ? r.map(x => x.trim())
+                    : r.trim()
+                : r
+        )
+        .then(r => callback(r));
 }
