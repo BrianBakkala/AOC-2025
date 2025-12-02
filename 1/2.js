@@ -1,4 +1,4 @@
-readFile(1, 0, true, function (r)
+readFile(1, 1, function (r)
 {
     const START_NUMBER = 50;
     const WHEEL_SIZE = 100;
