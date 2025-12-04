@@ -1,65 +1,61 @@
-readFile(3, 0, function (r)
+readFile(3, 1, function (r)
 {
-    // const banks = r;
-    // let sum = 0;
+    const banks = r;
+    let sum = 0;
 
-    // for (let bank of banks)
-    // {
-    //     const best = bestInBank(bank);
-    //     // console.log(bank, best);
-    //     sum += best;
-    // }
+    for (let bank of banks)
+    {
+        const best = bestInBank(bank, 12);
+        // console.log(bank, best);
+        sum += best;
+    }
 
-    // console.log(sum);
-
-
+    console.log(sum);
 });
 
 
-function bestInBank(bank)
+function bestInBank(bank, maxLength = 2)
 {
-
-    const MAX_LENGTH = 3;
     let string = "";
 
-    for (let c = 0; c < bank.length; c++)
+    let c = 0;
+    while (string.length < maxLength)
     {
-        const char = bank[c];
-
-        console.log(char);
+        const prospects = [];
         const scores = {};
-        for (let lookahead = 1; lookahead <= bank.length; lookahead++)
+
+        let lookahead = 0;
+
+        while (!!bank[c + lookahead])
         {
-            if (c + lookahead >= bank.length)
+            const index = c + lookahead;
+            const char = bank[index];
+            const remainingAfter = bank.length - 1 - (index);
+
+            //max possible length if picking this character
+            const maxStringLength = string.length + char.length + remainingAfter;
+
+            scores[char] = scores[char] ?? index;
+
+            //if there are enough remaining characters to reach max length
+            const wiggleRoom = maxStringLength - maxLength;
+            if (wiggleRoom >= 0)
             {
-                break;
+                prospects.push(char);
             }
 
-            const nextChar = bank[c + lookahead];
-            if (MAX_LENGTH - (lookahead + 1) >= 0)
-            {
-                scores[nextChar] = scores[nextChar] ?? {
-                    char: nextChar,
-                    index: c + lookahead,
-                    leftover: bank.slice(c + lookahead + 1),
-                    leftover_length: bank.slice(c + lookahead + 1).length,
-                    wiggle: MAX_LENGTH - (lookahead + 1),
-                };
-            }
-
+            lookahead++;
         }
 
-        const decision = Math.max(Object.keys(scores));
-        console.log(scores, decision);
-        const updatedString = string + bank.slice(c, scores[decision].index + 1);
+        const bestProspect = Math.max(...prospects.map(x => +x));
 
-        c = scores[decision].index;
-        string = updatedString;
+        //skip to next character after best prospect
+        c = scores[bestProspect];
+        string += bestProspect;
 
-        console.log(string);
+        c++;
     }
 
+    return +string;
+
 }
-
-
-console.log(bestInBank("91112"));
