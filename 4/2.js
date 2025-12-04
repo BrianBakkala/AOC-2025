@@ -1,10 +1,83 @@
-readFile(4, 0, function (r)
+readFile(4, 0, function (diagram)
 {
-
-    for (let unit of r)
-    {
-        console.log(unit);
-    }
-
-
+    const result = forkliftRound(diagram, true);
+    console.log(result.diagram.join("\n"));
+    console.log(result.count);
 });
+const formatIndices = (rowIndex, colIndex) => [+rowIndex, +colIndex].join(":");
+
+function removeIndices(diagram, indices, replacement = ".")
+{
+    for (let rowIndex in diagram)
+    {
+        for (let colIndex in diagram[rowIndex])
+        {
+            if (indices.includes(formatIndices(rowIndex, colIndex)))
+            {
+                diagram[rowIndex] =
+                    diagram[rowIndex].substring(0, colIndex)
+                    + replacement
+                    + diagram[rowIndex].substring(+colIndex + 1);
+            }
+        }
+    }
+    return diagram;
+}
+
+
+function forkliftRound(diagram, remove = true)
+{
+    let count = 0;
+    const indicesToRemove = [];
+
+    for (let rowIndex in diagram)
+    {
+        const row = diagram[rowIndex];
+        for (let colIndex in row)
+        {
+            const roll = row[colIndex];
+
+            if (roll === "@")
+            {
+                const neighbors = getNeighbors(diagram, +rowIndex, +colIndex);
+
+                if (neighbors.rolls < 4)
+                {
+                    indicesToRemove.push(formatIndices(rowIndex, colIndex));
+                    count++;
+                }
+            }
+        }
+    }
+    return {
+        count,
+        diagram: (remove ? removeIndices(diagram, indicesToRemove) : diagram),
+        indices: indicesToRemove
+    };
+
+}
+
+
+function getNeighbors(diagram, rowIndex, colIndex)
+{
+    const list = [
+
+        diagram[rowIndex - 1]?.[colIndex - 1],
+        diagram[rowIndex - 1]?.[colIndex],
+        diagram[rowIndex - 1]?.[colIndex + 1],
+
+
+        diagram[rowIndex][colIndex - 1],
+        diagram[rowIndex][colIndex + 1],
+
+        diagram[rowIndex + 1]?.[colIndex - 1],
+        diagram[rowIndex + 1]?.[colIndex],
+        diagram[rowIndex + 1]?.[colIndex + 1],
+
+    ];
+
+    const rolls = list.filter(x => x === "@").length;
+    const floors = list.filter(x => x === ".").length;
+
+    return { list, rolls, floors };
+}
