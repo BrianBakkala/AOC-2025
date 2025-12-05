@@ -1,8 +1,16 @@
-readFile(4, 0, function (diagram)
+readFile(4, 1, function (diagram)
 {
-    const result = forkliftRound(diagram, true);
-    console.log(result.diagram.join("\n"));
-    console.log(result.count);
+    let sum = 0;
+    let result;
+
+    do
+    {
+        result = forkliftRound(diagram, true);
+        sum += result.count;
+    }
+    while (result.count > 0);
+
+    console.log(sum);
 });
 const formatIndices = (rowIndex, colIndex) => [+rowIndex, +colIndex].join(":");
 
