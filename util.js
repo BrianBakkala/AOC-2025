@@ -1,4 +1,4 @@
-async function readFile(day, number, callback = () => { }, delimiter = "\r\n", trim = false)
+async function readFile(day, number, callback = () => { }, delimiter = "\n", trim = false)
 {
     return await fetch(`${day}/${number}.txt`)
         .then(r => r.text())
