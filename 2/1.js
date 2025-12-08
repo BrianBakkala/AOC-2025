@@ -19,7 +19,6 @@ readFile(2, 1, function (r)
 
 }, ",", true);
 
-console.log(isValid("1212"));
 function isValid(unit)
 {
     return !/^(\d+)\1$/.test(unit);
