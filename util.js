@@ -16,3 +16,8 @@ async function readFile(day, number, callback = () => { }, delimiter = "\r\n", t
         )
         .then(r => callback(r));
 }
+function arrayUnique(arr)
+{
+    return [...new Set(arr)];
+};
+
