@@ -2,6 +2,8 @@ let perimeterPoints = [];
 let perimeterPointsX = {};
 let perimeterPointsY = {};
 
+let neighbors = {};
+
 const vertices = [];
 const pairs = {};
 const interiorPointsY = {};
@@ -32,10 +34,14 @@ readFile(9, 1, function (r)
     {
         const unit = r[unitIndex];
         const prevUnit = r[unitIndex - 1 < 0 ? r.length - 1 : unitIndex - 1];
+        const prevPrevUnit = r[unitIndex - 2 < 0 ? r.length - 2 : unitIndex - 2];
 
 
         const [x, y] = (unit.split(",").map(Number));
         const [prevX, prevY] = (prevUnit.split(",").map(Number));
+        const [ppX, ppY] = (prevPrevUnit.split(",").map(Number));
+
+        neighbors[prepCoords({ x: prevX, y: prevY })] = [unit.split(","), prevPrevUnit.split(",")];
 
         if (prevX === x)
         {
@@ -84,6 +90,8 @@ readFile(9, 1, function (r)
             }
         );
 
+
+        console.log(neighbors);
 
 
         for (const point1 of outsidePoints)
