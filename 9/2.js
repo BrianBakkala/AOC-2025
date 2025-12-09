@@ -11,7 +11,7 @@ const interiorPointsX = {};
 let maxX = 0;
 let maxY = 0;
 
-readFile(9, 1, function (r)
+readFile(9, 0, function (r)
 {
 
     const pushPerimeterPoints = ({ x, y }) =>
@@ -41,7 +41,10 @@ readFile(9, 1, function (r)
         const [prevX, prevY] = (prevUnit.split(",").map(Number));
         const [ppX, ppY] = (prevPrevUnit.split(",").map(Number));
 
-        neighbors[prepCoords({ x: prevX, y: prevY })] = [unit.split(","), prevPrevUnit.split(",")];
+        neighbors[prepCoords({ x: prevX, y: prevY })] = [
+            { x: prevX, y: prevY },
+            { x: ppX, y: ppY },
+        ];
 
         if (prevX === x)
         {
@@ -73,7 +76,7 @@ readFile(9, 1, function (r)
     perimeterPoints = perimeterPoints.sort((a, b) => +a.split("_")[0] - +b.split("_")[0]);
 
 
-    for (let parts = 10; parts > 4; parts--)
+    for (let parts = 10; parts > 1; parts--)
     {
         const xThreshold = maxX / parts;
         const yThreshold = maxY / parts;
@@ -90,22 +93,15 @@ readFile(9, 1, function (r)
             }
         );
 
-
-        console.log(neighbors);
-
-
-        for (const point1 of outsidePoints)
+        for (const point1String of Object.keys(neighbors))
         {
-            console.log("@");
-            for (const point2 of outsidePoints)
-            {
-                // const area = calcArea(point1, point2);
+            const neighbs = neighbors[point1String];
+            const area = calcAreaBetter(point1String, ...neighbs);
 
-                //         if (area > bestArea)
-                //         {
-                //             bestArea = area;
-                //             bestPoints = [point1, point2];
-                //         }
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestPoints = [neighbs[0], neighbs[1]];
             }
         }
 
@@ -119,6 +115,64 @@ readFile(9, 1, function (r)
     console.log(result);
 
 });
+
+function calcAreaBetter(mainPoint, neighbor1, neighbor2)
+{
+
+    const [x1, y1] = mainPoint.split("_").map(Number);
+
+
+    //get point 4
+    const otherX = x1 == neighbor1.x ? neighbor2.x : neighbor1.x;
+    const otherY = y1 == neighbor1.y ? neighbor2.y : neighbor1.y;
+
+    const point1 = { x: x1, y: y1 };
+    const point4 = { x: otherX, y: otherY };
+
+    const pairString1 = [point1, point4].map(prepCoords).sort().join(":");
+    const pairString2 = [neighbor1, neighbor2].map(prepCoords).sort().join(":");
+
+    if (pairs.hasOwnProperty(pairString1))
+    {
+        const result = pairs[pairString1];
+        pairs[pairString1] = result;
+        pairs[pairString2] = result;
+        return result;
+    }
+    if (pairs.hasOwnProperty(pairString2))
+    {
+        const result = pairs[pairString2];
+        pairs[pairString1] = result;
+        pairs[pairString2] = result;
+        return result;
+    }
+
+
+    //check if point 4 is inside the shape
+    const isInteriorPoint = isInterior(otherX, otherY);
+    if (!isInteriorPoint)
+    {
+        pairs[pairString1] = false;
+        pairs[pairString2] = false;
+    }
+    console.log(isInteriorPoint);
+
+
+
+
+
+
+
+    //get area from neighbor1 and neighbor2
+    const height = 1 + Math.abs(neighbor1.y - neighbor2.y);
+    const width = 1 + Math.abs(neighbor1.x - neighbor2.x);
+    const area = height * width;
+
+    pairs[pairString1] = area;
+    pairs[pairString2] = area;
+    return area;
+
+}
 
 
 function calcArea(point1, point2)
@@ -194,19 +248,37 @@ function checkPerimeter(point1, point2, point3, point4)
 
 }
 
-function getInteriorPointsAtY(y)
+function isInterior(x, y)
+{
+    const interiorY = getInteriorPointsAtY(y, x + 1);
+    if (!interiorY.includes(x))
+    {
+        return false;
+    }
+    const interiorX = getInteriorPointsAtX(x, y + 1);
+    if (!interiorX.includes(y))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+function getInteriorPointsAtY(y, maxXValue)
 {
     if (interiorPointsY.hasOwnProperty(y))
     {
         return interiorPointsY[y];
     }
 
+    maxXValue = maxXValue ?? maxX;
+
     let inside = false;
     let wasOnPerimeter = false;
     let interiorPoints = [];
     let perimPoints = perimeterPointsY[y];
 
-    for (let x = 0; x <= maxX; x++)
+    for (let x = 0; x <= maxXValue; x++)
     {
         const point = prepCoords({ y, x });
         const isOnPerimeter = perimPoints.includes(point);
@@ -226,7 +298,7 @@ function getInteriorPointsAtY(y)
 
         if (isOnPerimeter || inside)
         {
-            interiorPoints.push(point);
+            interiorPoints.push(x);
         }
 
         wasOnPerimeter = isOnPerimeter;
@@ -238,19 +310,22 @@ function getInteriorPointsAtY(y)
     return result;
 }
 
-function getInteriorPointsAtX(x)
+function getInteriorPointsAtX(x, maxYValue)
 {
     if (interiorPointsX.hasOwnProperty(x))
     {
         return interiorPointsX[x];
     }
 
+    maxYValue = maxYValue ?? maxY;
+
+
     let inside = false;
     let wasOnPerimeter = false;
     let interiorPoints = [];
     let perimPoints = perimeterPointsX[x];
 
-    for (let y = 0; y <= maxY; y++)
+    for (let y = 0; y <= maxYValue; y++)
     {
         const point = prepCoords({ y, x });
         const isOnPerimeter = perimPoints.includes(point);
