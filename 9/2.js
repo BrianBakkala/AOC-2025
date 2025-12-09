@@ -60,16 +60,20 @@ readFile(9, 0, function (r)
 });
 
 
-function extendRectangle(point1, point2)
+function extendRectangle(point1, point3)
 {
-    const cornerPoints = [point1, point2];
+    const cornerPoints = [point1, point3];
 
-    const minX = Math.min(point1[0], point2[0]);
-    const minY = Math.min(point1[1], point2[1]);
-
-    console.log(cornerPoints);
+    const point2 = [point3[0], point1[1]];
+    const point4 = [point1[0], point3[1]];
 
 
-
+    return [
+        point1,
+        point2,
+        point3,
+        point4,
+        point1,
+    ];
 
 }
