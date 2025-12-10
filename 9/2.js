@@ -1,5 +1,8 @@
 const shape = [];
-const rectangles = [];
+const pairs = [];
+
+best = 0;
+
 let maxX = 0;
 let maxY = 0;
 
@@ -22,86 +25,81 @@ readFile(9, 1, function (r)
         }
     }
 
-    //close polygon
-    shape.push(r[0].split(",").map(Number));
-
-
-    let maxArea = 0;
-    let best = null;
-
 
     for (let ind1 in shape)
     {
-        if (ind1 % 100 == 0)
-        {
-            console.log(ind1, "/", shape.length);
-        }
-
         for (let ind2 in shape)
         {
             if (ind1 !== ind2)
             {
-                const point1 = shape[ind1];
-                const point2 = shape[ind2];
-
-                const rectangleDiagonals = [point1, point2];
-
-                // console.log([point1, point2]);
-                const rectPoints = getRectanglePoints(...rectangleDiagonals);
-                if (!testPoints(rectPoints)) continue;
-
-
-                const area = getArea(rectPoints[0], rectPoints[2]);
-                if (area > maxArea)
-                {
-                    maxArea = area;
-                }
-
+                pairs.push([shape[ind1], shape[ind2]]);
             }
         }
     }
 
-    const result = maxArea;
+    let pairCount = 0;
+    const startingPoint = performance.now();
+    for (const pair of pairs)
+    {
+        if (pairCount % (pairs.length / 10) == 0)
+        {
+            printTimeRemaining(startingPoint, pairCount, pairs.length);
+        }
+        const isValid = rectangleIsEntirelyInShape(pair);
+
+        if (isValid)
+        {
+            const area = getArea(pair);
+            if (area > best)
+            {
+                best = area;
+            }
+        }
+        pairCount += 1;
+
+    }
+
+    const result = best;
 
     console.log(result);
-    console.log(result === 4652231070);
+    console.log(result === 1544362560);
 
     return;
 });
 
-function testPoints(points)
+function rectangleIsEntirelyInShape(pair)
 {
-    for (const p of points)
-    {
-        if (
-            !geometric.pointInPolygon(p, shape) &&
-            !geometric.pointOnPolygon(p, shape, 0.01)
-        )
-        {
-            return false;
-        }
-    }
-    return true;
+    const epsilon = 1e-6;
+
+    const rect = getRectangle(pair);
+    const scaled = geometric.polygonScale(rect, (1 - epsilon));
+
+    return geometric.polygonInPolygon(scaled, shape, (epsilon / 10));
 }
 
 
-function getRectanglePoints(point1, point3)
+function getRectangle(pair)
 {
-    const point2 = [point3[0], point1[1]];
-    const point4 = [point1[0], point3[1]];
+    const [p1, p3] = pair;
 
+    const x1 = Math.min(p1[0], p3[0]);
+    const x2 = Math.max(p1[0], p3[0]);
+    const y1 = Math.min(p1[1], p3[1]);
+    const y2 = Math.max(p1[1], p3[1]);
 
     return [
-        point1,
-        point2,
-        point3,
-        point4,
+        [x1, y1],
+        [x2, y1],
+        [x2, y2],
+        [x1, y2],
+        [x1, y1],
     ];
-
 }
 
-function getArea(point1, point3)
+
+function getArea(pair)
 {
+    const [point1, point3] = pair;
     const width = 1 + Math.abs(point3[0] - point1[0]);
     const height = 1 + Math.abs(point3[1] - point1[1]);
 
