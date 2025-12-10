@@ -112,6 +112,7 @@ readFile(9, 1, function (r)
     const result = Math.max(...Object.values(pairs).map(Number));
     console.log(result, result === 162180888);
 
+    //4652231070
     //162180888
 
 });
