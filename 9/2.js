@@ -41,10 +41,9 @@ readFile(9, 1, function (r)
     const startingPoint = performance.now();
     for (const pair of pairs)
     {
-        if (pairCount % (pairs.length / 10) == 0)
-        {
-            printTimeRemaining(startingPoint, pairCount, pairs.length);
-        }
+
+        printTimeRemaining(startingPoint, pairCount, pairs.length, 20);
+
         const isValid = rectangleIsEntirelyInShape(pair);
 
         if (isValid)
@@ -60,9 +59,7 @@ readFile(9, 1, function (r)
     }
 
     const result = best;
-
     console.log(result);
-    console.log(result === 1544362560);
 
     return;
 });

@@ -22,13 +22,29 @@ function arrayUnique(arr)
     return [...new Set(arr)];
 };
 
-function printTimeRemaining(startingPointTimestamp, currentPoint, totalPoint)
+function printTimeRemaining(startingPointTimestamp, currentPoint, totalPoint, numIntervals = 20)
 {
+
+    if(currentPoint % parseInt(totalPoint/numIntervals) !== 0)
+    {
+        return;
+    }
     const currentTimestamp = performance.now();
     const timeItsTaken = (currentTimestamp - startingPointTimestamp);
-    const completed = currentPoint / totalPoint;
-    const remaining = (totalPoint - currentPoint) / totalPoint;
 
-    console.log(timeItsTaken);
-    console.log(completed);
+    if (currentPoint === 0)
+    {
+        console.log("―");
+        return;
+    }
+    const timePerThing = timeItsTaken / currentPoint;
+    const numRemainingThings = (totalPoint - currentPoint);
+
+    const estMillisecondsRemaining = numRemainingThings * timePerThing;
+    const secondsFormatted = `${(estMillisecondsRemaining / 1000).toFixed(2)} seconds remaining`;
+
+    const percentage = currentPoint * 100 / totalPoint;
+    const percentageFormatted = `${percentage.toFixed(0)}%`;
+
+    console.log(`${percentageFormatted} ${secondsFormatted}`);
 }
