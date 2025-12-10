@@ -1,121 +1,64 @@
-class BitArray
-{
-    arr;
-    constructor(input)
-    {
-        if (typeof input === "number")
-        {
-            this.length = input;
-            this.arr = new Uint32Array((input + 31) >>> 5);
-        } else if (Array.isArray(input))
-        {
-            this.length = input.length;
-            this.arr = new Uint32Array((this.length + 31) >>> 5);
-
-            for (let i = 0; i < input.length; i++)
-            {
-                if (input[i])
-                {
-                    this.arr[i >>> 5] |= 1 << (i & 31);
-                }
-            }
-        }
-    }
-
-    get(i)
-    {
-        return (this.arr[i >>> 5] >>> (i & 31)) & 1;
-    }
-    set(i, val)
-    {
-        if (val) this.arr[i >>> 5] |= 1 << (i & 31);
-        else this.arr[i >>> 5] &= ~(1 << (i & 31));
-    }
-    toggle(i)
-    {
-        if (i < 0 || i >= this.length) return;
-
-        const idx = i >>> 5;        // which 32-bit word
-        const mask = 1 << (i & 31); // which bit inside that word
-
-        this.arr[idx] ^= mask;      // XOR = toggle
-    }
-    print()
-    {
-        let out = "";
-        for (let i = 0; i < this.length; i++)
-        {
-            out += (this.get(i) ? "true" : "false");
-            if (i !== this.length - 1) out += " ";
-        }
-        console.log(out);
-    }
-
-    copy()
-    {
-        const newCopy = new BitArray(this.length);
-        for (let j = 0; j < newCopy.length; j += 1)
-        {
-            newCopy.set(j, this.get(j));
-        }
-        return newCopy;
-    }
-
-
-    compare(other)
-    {
-        if (!(other instanceof BitArray)) return false;
-        if (this.length !== other.length) return false;
-
-        const a = this.arr;
-        const b = other.arr;
-
-
-        for (let i = 0; i < a.length; i++)
-        {
-            if (a[i] !== b[i]) return false;
-        }
-
-        return true;
-    }
-
-
-}
-
 class MachineState
 {
-    constructor(input)
+    constructor(length, initialJoltageState)
     {
-        this.indicators = new BitArray(input);
-        this.length = this.indicators.length;
+        this.joltages = new Array(length);
+
+        if (initialJoltageState?.length > 0)
+        {
+            this.joltages = [...initialJoltageState];
+        }
+
         this.buttonPresses = [];
         this.numPresses = 0;
     }
 
+
     copy()
     {
         const newCopy = new MachineState(this.length);
-        newCopy.indicators = this.indicators.copy();
+        newCopy.joltages = [...this.joltages];
         newCopy.numPresses = this.numPresses;
         newCopy.buttonPresses = [...this.buttonPresses];
         return newCopy;
+    }
+
+    increment(index)
+    {
+        this.joltages[index] += 1;
+    }
+
+    key()
+    {
+        return this.joltages.join(".");
     }
 
     pressButton(wiringSchematic)
     {
         for (let j = 0; j < wiringSchematic.length; j += 1)
         {
-            this.indicators.toggle(wiringSchematic[j]);
+            this.increment(wiringSchematic[j]);
         }
         this.numPresses += 1;
         this.buttonPresses.push(wiringSchematic);
     }
 
-    compare(otherMachine)
+    compare(otherState)
     {
+        function arraysEqual(a, b)
+        {
+            if (a === b) return true;
+            if (a == null || b == null) return false;
+            if (a.length !== b.length) return false;
 
-        return this.indicators.compare(otherMachine.indicators);
+            for (var i = 0; i < a.length; ++i)
+            {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        }
 
+        return arraysEqual(this.joltages, otherState.joltages);
     }
 }
 
@@ -129,16 +72,25 @@ readFile(10, 1, function (r)
         const unit = r[unitIndex];
         const match = unit.match(/\[(?<indicatorLightDiagram>.*)\](?<buttonWiringSchematics>.*)\{(?<joltageRequirements>.*)\}/);
         const buttonWiringSchematics = match.groups.buttonWiringSchematics.trim().split(" ").map(x => x.slice(1, -1).split(",").map(Number));
-        const joltageRequirements = match.groups.joltageRequirements;
+        const joltageRequirements = match.groups.joltageRequirements.split(",").map(Number);
 
-        const goal = new MachineState(match.groups.indicatorLightDiagram.split("").map(x => x === "#" ? true : false));
-        let initialState = new MachineState(goal.length);
+        const goal = new MachineState(joltageRequirements.length,
+            joltageRequirements
+        );
 
-        const result = getButtonCombos(initialState, buttonWiringSchematics, goal, 3);
+        const initialPosition = new MachineState(joltageRequirements.length, Array(joltageRequirements.length).fill(0));
 
-        printTimeRemaining(startingPoint, unitIndex, r.length);
+        console.log(`# Analyzing ${+unitIndex + 1}/${r.length}`);
+        const result = getButtonCombos(initialPosition, buttonWiringSchematics, goal, 50);
+
+        if (result === Number.MAX_SAFE_INTEGER)
+        {
+            return;
+        }
+
+        printTimeRemaining(startingPoint, +unitIndex + 1, r.length);
         sum += result;
-
+        console.log("# Best:", result);
     }
     console.log(sum, sum === 428);
     return;
@@ -146,45 +98,51 @@ readFile(10, 1, function (r)
 });
 
 
-function getButtonCombos(initialState, buttons, goal, maxPresses = 3)
+function getButtonCombos(initialState, buttons, goal, maxPresses = 10)
 {
-    let best = Number.MAX_SAFE_INTEGER;
-    let results = [];
+    const q = [initialState];
+    let numPresses = 0;
+    const visited = new Map();
 
-    function pressButtons(state)
+    while (q.length > 0)
     {
+        //grab state off top
+        const state = q.shift();
+
+        if (state.numPresses > numPresses)
+        {
+            numPresses = state.numPresses;
+            console.log(numPresses, q.length);
+        }
+
+
+        //did i reach goal?
         if (state.compare(goal))
         {
-            if (state.numPresses < best)
-            {
-                results = [];
-                best = state.numPresses;
-            }
-            if (state.numPresses === best)
-            {
-                results.push(state);
-            }
-            return;
+            return state.numPresses;
+        }
 
-        }
-        else if (state.numPresses >= maxPresses || state.numPresses > best)
+
+
+        //prune/memo
+        const stateKey = state.key();
+        if (visited.has(stateKey) && visited.get(stateKey) <= state.numPresses)
         {
-            return;
+            //we've been here before with a better number
+            continue;
         }
+
+        visited.set(stateKey, state.numPresses);
+
+
+        //try all buttons and push to q
 
         for (const button of buttons)
         {
             const newState = state.copy();
             newState.pressButton(button);
-            pressButtons(newState);
+            q.push(newState);
         }
     }
-
-    pressButtons(initialState);
-    if (best === Number.MAX_SAFE_INTEGER)
-    {
-        return getButtonCombos(initialState, buttons, goal, maxPresses + 1);
-    }
-    return best;
 }
 
