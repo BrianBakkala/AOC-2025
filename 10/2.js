@@ -1,8 +1,6 @@
 class BitArray
 {
-    numPresses = 0;
-    buttonPresses = [];
-
+    arr;
     constructor(input)
     {
         if (typeof input === "number")
@@ -53,7 +51,6 @@ class BitArray
         console.log(out);
     }
 
-
     copy()
     {
         const newCopy = new BitArray(this.length);
@@ -61,8 +58,6 @@ class BitArray
         {
             newCopy.set(j, this.get(j));
         }
-        newCopy.numPresses = this.numPresses;
-        newCopy.buttonPresses = [...this.buttonPresses];
         return newCopy;
     }
 
@@ -84,14 +79,43 @@ class BitArray
         return true;
     }
 
+
+}
+
+class MachineState
+{
+    constructor(input)
+    {
+        this.indicators = new BitArray(input);
+        this.length = this.indicators.length;
+        this.buttonPresses = [];
+        this.numPresses = 0;
+    }
+
+    copy()
+    {
+        const newCopy = new MachineState(this.length);
+        newCopy.indicators = this.indicators.copy();
+        newCopy.numPresses = this.numPresses;
+        newCopy.buttonPresses = [...this.buttonPresses];
+        return newCopy;
+    }
+
     pressButton(wiringSchematic)
     {
         for (let j = 0; j < wiringSchematic.length; j += 1)
         {
-            this.toggle(wiringSchematic[j]);
+            this.indicators.toggle(wiringSchematic[j]);
         }
         this.numPresses += 1;
         this.buttonPresses.push(wiringSchematic);
+    }
+
+    compare(otherMachine)
+    {
+
+        return this.indicators.compare(otherMachine.indicators);
+
     }
 }
 
@@ -104,19 +128,19 @@ readFile(10, 1, function (r)
     {
         const unit = r[unitIndex];
         const match = unit.match(/\[(?<indicatorLightDiagram>.*)\](?<buttonWiringSchematics>.*)\{(?<joltageRequirements>.*)\}/);
-        const goal = new BitArray(match.groups.indicatorLightDiagram.split("").map(x => x === "#" ? true : false));
         const buttonWiringSchematics = match.groups.buttonWiringSchematics.trim().split(" ").map(x => x.slice(1, -1).split(",").map(Number));
         const joltageRequirements = match.groups.joltageRequirements;
 
-        let state = new BitArray(goal.length);
+        const goal = new MachineState(match.groups.indicatorLightDiagram.split("").map(x => x === "#" ? true : false));
+        let initialState = new MachineState(goal.length);
 
-        const result = getButtonCombos(state, buttonWiringSchematics, goal);
+        const result = getButtonCombos(initialState, buttonWiringSchematics, goal, 3);
 
         printTimeRemaining(startingPoint, unitIndex, r.length);
         sum += result;
 
     }
-    console.log(sum);
+    console.log(sum, sum === 428);
     return;
 
 });
