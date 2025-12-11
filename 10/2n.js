@@ -356,7 +356,7 @@ function getButtonCombos(initialState, buttons, goal)
         if (total > maxTotal)
         {
             maxTotal = total;
-            console.log(total);
+            console.log(maxStart, "→ ", maxTotal, " ←", maxEnd);
         }
     }
 
