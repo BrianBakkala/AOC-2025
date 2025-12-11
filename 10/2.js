@@ -98,7 +98,7 @@ readFile(10, 1, function (r)
 });
 
 
-function getButtonCombos(initialState, buttons, goal, maxPresses = 10)
+function getButtonCombos(initialState, buttons, goal)
 {
     const q = [initialState];
     let numPresses = 0;
