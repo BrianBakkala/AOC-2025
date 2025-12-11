@@ -2,93 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// __dirname replacement for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-const progressFile = path.join(__dirname, "progress.json");
-
-// Load progress (or create empty structure)
-let progress = {};
-if (fs.existsSync(progressFile))
-{
-    progress = JSON.parse(fs.readFileSync(progressFile, "utf8"));
-} else
-{
-    fs.writeFileSync(progressFile, JSON.stringify({}, null, 2));
-}
-
-// Helper: save progress to disk
-const saveProgress = () =>
-{
-    fs.writeFileSync(progressFile, JSON.stringify(progress, null, 2));
-};
-
-
-
-class MachineState
-{
-    constructor(length, initialJoltageState)
-    {
-        this.joltages = new Array(length);
-
-        if (initialJoltageState?.length > 0)
-        {
-            this.joltages = [...initialJoltageState];
-        }
-
-        this.buttonPresses = [];
-        this.numPresses = 0;
-    }
-
-
-    copy()
-    {
-        const newCopy = new MachineState(this.length);
-        newCopy.joltages = [...this.joltages];
-        newCopy.numPresses = this.numPresses;
-        newCopy.buttonPresses = [...this.buttonPresses];
-        return newCopy;
-    }
-
-    increment(index)
-    {
-        this.joltages[index] += 1;
-    }
-
-    key()
-    {
-        return this.joltages.join(".");
-    }
-
-    pressButton(wiringSchematic)
-    {
-        for (let j = 0; j < wiringSchematic.length; j += 1)
-        {
-            this.increment(wiringSchematic[j]);
-        }
-        this.numPresses += 1;
-        this.buttonPresses.push(wiringSchematic);
-    }
-
-    compare(otherState)
-    {
-        function arraysEqual(a, b)
-        {
-            if (a === b) return true;
-            if (a == null || b == null) return false;
-            if (a.length !== b.length) return false;
-
-            for (var i = 0; i < a.length; ++i)
-            {
-                if (a[i] !== b[i]) return false;
-            }
-            return true;
-        }
-
-        return arraysEqual(this.joltages, otherState.joltages);
-    }
-}
 
 const r0 = `[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
@@ -246,14 +160,114 @@ const r = `[.#####.#.#] (0,1,2,3,6,7,8,9) (1,9) (0,1,3,7,8) (0,6,7,8) (5,6) (0,2
 [###..] (0,3,4) (3,4) (0,2,3,4) (1,2) (0,1,2,3) (0,1,2) (0) {197,54,186,174,154}
 [..#..] (0,2) (0,3) (3,4) (0,1,3,4) (0,1,2) (1,2,4) {63,35,32,49,36}`;
 
+
+// __dirname replacement for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const progressFile = path.join(__dirname, "progress.json");
+
+// Load progress (or create empty structure)
+let progress = {};
+if (fs.existsSync(progressFile))
+{
+    progress = JSON.parse(fs.readFileSync(progressFile, "utf8"));
+} else
+{
+    fs.writeFileSync(progressFile, JSON.stringify({}, null, 2));
+}
+
+// Helper: save progress to disk
+const saveProgress = () =>
+{
+    fs.writeFileSync(progressFile, JSON.stringify(progress, null, 2));
+};
+
+
+class MachineState
+{
+    constructor(length, initialJoltageState)
+    {
+        this.joltages = initialJoltageState?.length
+            ? initialJoltageState.slice()
+            : new Uint16Array(length).fill(0);
+
+        this.numPresses = 0;
+    }
+
+
+    copy()
+    {
+        const newCopy = new MachineState(this.length);
+        newCopy.joltages = [...this.joltages];
+        newCopy.numPresses = this.numPresses;
+        return newCopy;
+    }
+
+    increment(index)
+    {
+        this.joltages[index] += 1;
+    }
+
+    decrement(index)
+    {
+        this.joltages[index] -= 1;
+    }
+
+    key()
+    {
+        //hash
+        let h = 17;
+        const arr = this.joltages;
+        for (let i = 0; i < arr.length; i++)
+            h = h * 31 + arr[i] | 0;
+        return h;
+    }
+
+    pressButton(wiringSchematic)
+    {
+        for (let j = 0; j < wiringSchematic.length; j += 1)
+        {
+            this.increment(wiringSchematic[j]);
+        }
+        this.numPresses += 1;
+    }
+
+    unpressButton(wiringSchematic)
+    {
+        for (let j = 0; j < wiringSchematic.length; j += 1)
+        {
+            this.decrement(wiringSchematic[j]);
+        }
+        this.numPresses += 1;
+    }
+
+    compare(otherState)
+    {
+        function arraysEqual(a, b)
+        {
+            if (a === b) return true;
+            if (a == null || b == null) return false;
+            if (a.length !== b.length) return false;
+
+            for (var i = 0; i < a.length; ++i)
+            {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        }
+
+        return arraysEqual(this.joltages, otherState.joltages);
+    }
+}
+
 const parts = r.split("\n");
+// const parts = r0.split("\n");
 
-
-console.log(parts);
-// Determine where to resume
-// Convert keys to numbers, find max, continue from there
+// find where to resume
 let startIndex = 0;
 const completedIndices = Object.keys(progress).map(Number);
+const partialResult = Object.values(progress).map(x => x.result).reduce((t, i) => t += i, 0) ?? 0;
 if (completedIndices.length > 0)
 {
     startIndex = Math.max(...completedIndices) + 1;
@@ -288,7 +302,7 @@ for (let unitIndex = startIndex; unitIndex < parts.length; unitIndex++)
     sum += result;
     console.log("# Best:", result);
 
-    // --- SAVE PROGRESS ---
+    // save
     progress[unitIndex] = {
         result,
         timestamp: Date.now()
@@ -296,7 +310,7 @@ for (let unitIndex = startIndex; unitIndex < parts.length; unitIndex++)
     saveProgress();
 }
 
-console.log("All done. Sum =", sum);
+console.log("All done. Sum =", sum + partialResult);
 
 
 
@@ -304,47 +318,104 @@ console.log("All done. Sum =", sum);
 function getButtonCombos(initialState, buttons, goal)
 {
     const q = [initialState];
-    let numPresses = 0;
+    const reverseQ = [goal];
+
     const visited = new Map();
+    const revVisited = new Map();
 
-    while (q.length > 0)
+    let maxStart = 0;
+    let maxEnd = 0;
+    let maxTotal = 0;
+
+    function updateMaxTotal(numPresses, press)
     {
-        //grab state off top
+        if (press)
+        {
+            if (numPresses > maxStart)
+            {
+                maxStart = numPresses;
+            }
+            else
+            {
+                return;
+            }
+        }
+        else
+        {
+            if (numPresses > maxEnd)
+            {
+                maxEnd = numPresses;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        const total = maxStart + maxEnd;
+        if (total > maxTotal)
+        {
+            maxTotal = total;
+            console.log(total);
+        }
+    }
+
+    function expand(q, visitedHere, visitedThere, press)
+    {
+        //grab states
+        // grab off top
         const state = q.shift();
-
-        if (state.numPresses > numPresses)
-        {
-            numPresses = state.numPresses;
-            console.log(numPresses, q.length);
-        }
-
-
-        //did i reach goal?
-        if (state.compare(goal))
-        {
-            return state.numPresses;
-        }
-
-
-
-        //prune/memo
-        const stateKey = state.key();
-        if (visited.has(stateKey) && visited.get(stateKey) <= state.numPresses)
-        {
-            //we've been here before with a better number
-            continue;
-        }
-
-        visited.set(stateKey, state.numPresses);
-
 
         //try all buttons and push to q
 
         for (const button of buttons)
         {
             const newState = state.copy();
-            newState.pressButton(button);
-            q.push(newState);
+
+            if (press)
+            {
+                newState.pressButton(button);
+            }
+            else
+            {
+                newState.unpressButton(button);
+            }
+
+
+            updateMaxTotal(newState.numPresses, press);
+
+            //done?
+            const stateKey = newState.key();
+            if (!visitedHere.has(stateKey))
+            {
+                visitedHere.set(stateKey, newState.numPresses);
+                q.push(newState);
+            }
+
+            if (visitedThere.has(stateKey))
+            {
+                return visitedThere.get(stateKey) + visitedHere.get(stateKey);
+            }
+
+        }
+    }
+
+    let result;
+
+    while (q.length > 0 && reverseQ.length > 0)
+    {
+
+        if (q.length < reverseQ.length)
+        {
+            result = expand(q, visited, revVisited, true);
+        }
+        else
+        {
+            result = expand(reverseQ, revVisited, visited, false);
+        }
+        if (result !== undefined)
+        {
+            return result;
         }
     }
 }
