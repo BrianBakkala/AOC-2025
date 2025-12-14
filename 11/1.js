@@ -12,7 +12,8 @@ readFile(11, 1, function (r)
         network[start] = ends;
     }
 
-    buildPath([], 'svr');
+
+    buildPath([], 'you');
 
     function buildPath(pathSoFar, node) 
     {
@@ -22,11 +23,8 @@ readFile(11, 1, function (r)
         }
         else if (node === 'out')
         {
-            if (pathSoFar.includes('dac') && pathSoFar.includes('fft'))
-            {
-                // paths.push([...pathSoFar, node]);
-                pathCount += 1;
-            }
+            // paths.push([...pathSoFar, node]);
+            pathCount += 1;
             return;
         }
 
@@ -38,7 +36,7 @@ readFile(11, 1, function (r)
         }
     }
 
-    console.log(paths);
+    // console.log(paths);
     console.log(pathCount);
 
 
